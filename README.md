@@ -11,4 +11,7 @@ El objetivo del test es que usen cloudformation para crear la infraestructura y 
 - Circleci para automatizar la subida de archivos a un bucket S3
 
 ## El Desafío
+### Crear la siguiente infraestructura
+![Nubox!!!!](/infra.png?raw=true "infra")
+
 
