@@ -12,6 +12,6 @@ El objetivo del test es que usen cloudformation para crear la infraestructura y 
 
 ## El Desafío
 ### Crear la siguiente infraestructura
-![Nubox!!!!](Infra.png?raw=true "infra")
+![Nubox!!!!](/infra_img/Infra.png?raw=true "nubox")
 
 
