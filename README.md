@@ -1,5 +1,5 @@
 # Hiring Test DevOps Nubox
-![Nubox!!!!](img_nubox/nubox_img.pmg?raw=true "nubox")
+![Nubox!!!!](/img_nubox/nubox_img.pmg?raw=true "nubox")
 [GitHubRepository](https://github.com/CristianRodriguezANubox/devops-hiring-test)
 
 
