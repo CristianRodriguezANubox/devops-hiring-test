@@ -3,9 +3,12 @@
 
 ## [GitHubRepository](https://github.com/CristianRodriguezANubox/devops-hiring-test)
 
+## Introducción
+El objetivo del test es que usen cloudformation para crear la infraestructura y github actions o circleci para la automatización.
 
-Your company is creating an Instagram clone called Udagram. Developers pushed the latest version of their code in a zip file located in a public S3 Bucket.
+## Tecnologías a Usar
+- CloudFormation para crear los recursos de la Infraestructura, diagrama mas abajo.
+- Circleci para automatizar la subida de archivos a un bucket S3
 
-You have been tasked with deploying the application, along with the necessary supporting software into its matching infrastructure.
+## El Desafío
 
-This needs to be done in an automated fashion so that the infrastructure can be discarded as soon as the testing team finishes their tests and gathers their results.
