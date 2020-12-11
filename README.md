@@ -32,7 +32,7 @@ El objetivo del test es que se use cloudformation para crear la infraestructura 
 - El repositorio debe venir con un README del paso a paso que se efectuo
 - En el README debe venir el Badge de status que los pasos se efectuaron de manera exitosa
 
-(/img_extras/badge_passed.png?raw=true)
+![Nubox!!!!](/img_extras/badge_passed.png?raw=true "nubox")
 
 
 - En el repositorio debe venir un print de pantalla mostrando el webserver con el HTML
