@@ -17,7 +17,7 @@
         se inicia el demonio. El autoscaling depende de la creacion previa de el stack de redes para su despliegue correcto.
 - Cuarto paso:
         Creación de un script bash que tiene 3 funciones, "create, delete, update", el uso de este script es `sh script-infra.sh create nombrestack`, la funcionalidad
-        es crear, destruir y actualizar un stack de cfn.
+        es crear, destruir y actualizar un stack de cfn. Se puede también indicar dentro del script la variable KEYPAIR para automatizar la creacion del stack.
 - Quinto paso:
         Creación de un pipeline (Github actions) que despliega en un bucket s3 un archivo zip con el contenido index.html y logo de nubox.
         El pipeline corre un cfn-lint sobre el archivo infra.yaml mostrado los errores y optimizaciones que se pueden realizar. Luego se crea un zip con los archivos mencionados
