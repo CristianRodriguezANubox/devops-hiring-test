@@ -24,5 +24,5 @@
         y por último se sube ese archivo a un bucket s3 el cual es usado para la descarga del contenido servido por las instancias web servers del autoscaling. 
 
 ![Challenge Nubox!!!!](holanubox.png?raw=true "nubox")
-
+ - Ci corriendo en otro repo github  *https://github.com/sebbustama/holanubox*
 ![CI](https://github.com/sebbustama/holanubox/workflows/CI/badge.svg?branch=main&event=push)
