@@ -1,0 +1,286 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Nubox Challenge
+Parameters:
+  KeyName:
+    Description: Keypair
+    Type: AWS::EC2::KeyPair::KeyName
+Resources:
+    ChallengeVpc:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: 10.0.0.0/16
+        EnableDnsSupport: true
+        Tags:
+          - Key: Name
+            Value: challengevpc
+    PublicSubnet1:
+      Type: AWS::EC2::Subnet
+      Properties:
+        MapPublicIpOnLaunch: true 
+        AvailabilityZone: us-west-2a
+        CidrBlock: 10.0.1.0/24
+        VpcId: !Ref ChallengeVpc
+
+    PublicSubnet2:
+      Type: AWS::EC2::Subnet
+      Properties:
+        MapPublicIpOnLaunch: 'true' 
+        AvailabilityZone: us-west-2b
+        CidrBlock: 10.0.3.0/24
+        VpcId: !Ref ChallengeVpc
+
+    PrivateSubnet1:
+      Type: AWS::EC2::Subnet
+      Properties: 
+        AvailabilityZone: us-west-2a
+        CidrBlock: 10.0.2.0/24
+        VpcId: !Ref ChallengeVpc
+
+    PrivateSubnet2:
+      Type: AWS::EC2::Subnet
+      Properties: 
+        AvailabilityZone: us-west-2b
+        CidrBlock: 10.0.4.0/24
+        VpcId: !Ref ChallengeVpc
+    
+    SecurityGroupLB:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: SecurityGroup Load Balancer
+        VpcId: !Ref ChallengeVpc
+        SecurityGroupIngress:
+          - IpProtocol: Tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0
+        Tags:
+          - Key: Name
+            Value: SecurityGroupLB
+    
+    SecurityGroupBastion:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: SecurityGroup
+        VpcId: !Ref ChallengeVpc
+        SecurityGroupIngress:
+          - IpProtocol: Tcp
+            FromPort: 22
+            ToPort: 22
+            CidrIp: 0.0.0.0/0
+        Tags:
+          - Key: Name
+            Value: SecurityGroupBastion
+    
+    SecurityWebApp:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: webservers security
+        VpcId: !Ref ChallengeVpc
+        SecurityGroupIngress:
+          - IpProtocol: Tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0
+          - IpProtocol: Tcp
+            FromPort: 22
+            ToPort: 22
+            CidrIp: 0.0.0.0/0
+        Tags:
+          - Key: Name
+            Value: SecurityGroupWebApp
+
+    InternetGateway:
+      Type: AWS::EC2::InternetGateway
+      Properties:
+        Tags:
+          - Key: Name
+            Value: challengeIgw
+    
+    InternetGatewayAttachment:
+      Type: AWS::EC2::VPCGatewayAttachment
+      Properties:
+        InternetGatewayId: !Ref InternetGateway
+        VpcId: !Ref ChallengeVpc
+
+    RouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref ChallengeVpc
+    
+    Route:
+      Type: AWS::EC2::Route
+      DependsOn: InternetGateway
+      Properties:
+        RouteTableId: !Ref RouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId: !Ref InternetGateway
+    
+    SubnetRouteTableAssociation1:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId: !Ref PublicSubnet1
+        RouteTableId: !Ref RouteTable
+    
+    SubnetRouteTableAssociation2:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId: !Ref PublicSubnet2
+        RouteTableId: !Ref RouteTable
+    
+    BastionHost1:
+      Type: AWS::EC2::Instance
+      Properties:
+        AvailabilityZone: us-west-2a 
+        ImageId: ami-0e472933a1395e172
+        InstanceType: t2.micro
+        KeyName: !Ref KeyName
+        Tags:
+          - Key: Nombre
+            Value: BastionHost1
+        NetworkInterfaces:
+          - DeviceIndex: "0"
+            AssociatePublicIpAddress: "true"
+            GroupSet: 
+            - !Ref SecurityGroupBastion
+            SubnetId: !Ref PublicSubnet1
+
+    BastionHost:
+      Type: AWS::EC2::Instance
+      Properties:
+        AvailabilityZone: us-west-2b 
+        ImageId: ami-0e472933a1395e172
+        InstanceType: t2.micro
+        KeyName: !Ref KeyName
+        Tags:
+          - Key: Nombre
+            Value: BastionHost1
+        NetworkInterfaces:
+          - DeviceIndex: "0"
+            AssociatePublicIpAddress: "true"
+            GroupSet: 
+            - !Ref SecurityGroupBastion
+            SubnetId: !Ref PublicSubnet2
+
+    storages3:
+      Type: AWS::S3::Bucket
+    
+    NAT:
+      Type: AWS::EC2::NatGateway
+      Properties:
+          AllocationId: !GetAtt EIP.AllocationId
+          SubnetId: !Ref PublicSubnet1
+    NAT2:
+      Type: AWS::EC2::NatGateway
+      Properties:
+        AllocationId: !GetAtt EIP2.AllocationId
+        SubnetId: !Ref PublicSubnet2
+
+    EIP:
+      DependsOn: InternetGatewayAttachment
+      Type: AWS::EC2::EIP
+      Properties:
+         Domain: ChallengeVpc
+    
+    EIP2:
+      DependsOn: InternetGatewayAttachment
+      Type: AWS::EC2::EIP
+      Properties:
+         Domain: ChallengeVpc
+    
+    RouteToNat:
+      Type: AWS::EC2::Route
+      DependsOn: InternetGateway
+      Properties:
+        RouteTableId: !Ref PrivateRouteTable1
+        DestinationCidrBlock: 0.0.0.0/0
+        NatGatewayId: !Ref NAT 
+    RouteToNat2:
+      Type: AWS::EC2::Route
+      DependsOn: InternetGateway
+      Properties:
+        RouteTableId: !Ref PrivateRouteTable2
+        DestinationCidrBlock: 0.0.0.0/0
+        NatGatewayId: !Ref NAT2 
+    
+    PrivateRouteTable1:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref ChallengeVpc
+
+    PrivateSubnetRouteTableAssociation1:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId: !Ref PrivateSubnet1
+        RouteTableId: !Ref PrivateRouteTable1
+
+    PrivateSubnetRouteTableAssociation2:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId: !Ref PrivateSubnet2
+        RouteTableId: !Ref PrivateRouteTable2
+
+    PrivateRouteTable2:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref ChallengeVpc
+    
+    TemplateASG:
+      Type: AWS::EC2::LaunchTemplate
+      Properties:
+        LaunchTemplateData:
+          ImageId: ami-0e472933a1395e172
+          InstanceType: t2.micro
+          KeyName: !Ref KeyName
+          SecurityGroupIds:
+            - !GetAtt SecurityWebApp.GroupId
+          UserData: 
+            Fn::Base64:
+              !Sub |
+                #!/bin/bash -xe
+                yum update -y && yum install curl httpd unzip -y
+                cd /tmp
+                curl -O https://challengedownload.s3.amazonaws.com/nubox.zip
+                unzip nubox.zip
+                mv index.html /var/www/html && mv img_nubox/ /var/www/html
+                systemctl start httpd && systemctl enable httpd
+
+
+    myASG:
+      Type: AWS::AutoScaling::AutoScalingGroup
+      DependsOn: 
+        - RouteToNat
+        - RouteToNat2
+        - PrivateSubnetRouteTableAssociation1
+        - PrivateSubnetRouteTableAssociation2
+      Properties:
+        MinSize: '1'
+        MaxSize: '3'
+        DesiredCapacity: '2'
+        LaunchTemplate:
+          LaunchTemplateId: !Ref TemplateASG
+          Version: '1'
+        VPCZoneIdentifier: 
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+        LoadBalancerNames:
+        - !Ref LoadBalancer
+
+    LoadBalancer:
+      Type: AWS::ElasticLoadBalancing::LoadBalancer
+      Properties:
+        Subnets:
+          - !Ref PublicSubnet1
+          - !Ref PublicSubnet2
+        CrossZone: false
+        Listeners:
+          - LoadBalancerPort: '80'
+            InstancePort: '80'
+            Protocol: HTTP
+        HealthCheck:
+          Target: HTTP:80/
+          HealthyThreshold: '3'
+          UnhealthyThreshold: '5'
+          Interval: '30'
+          Timeout: '5'
+        SecurityGroups:
+          - !Ref SecurityGroupLB
