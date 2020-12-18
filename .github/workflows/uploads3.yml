@@ -1,0 +1,12 @@
+name: UploadS3
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Upload to S3
+      run: bash scripts/pipeline/uploads3.sh ${{secrets.AWS_Bucket_Name}} "myfolder/myweb.zip" ${{secrets.AWS_Access_Key}} ${{secrets.AWS_Access_Secret}} "myweb.zip"

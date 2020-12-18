@@ -1,0 +1,370 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:  VPC Nubox Challenge
+
+#Parametros necesarios para el deploy
+Parameters:
+  KeyPairName:
+    Description: Name of KeyPair
+    Type: 'AWS::EC2::KeyPair::KeyName'
+
+#Recursos de la infra
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: '10.0.0.0/16'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: nbx-vpc
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: nbx-igw
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: 'us-west-2a'
+      CidrBlock: '10.0.1.0/24'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: nbx-public-subnet-az1
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: 'us-west-2b'
+      CidrBlock: '10.0.3.0/24'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: nbx-public-subnet-az2
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: 'us-west-2a'
+      CidrBlock: '10.0.2.0/24'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: nbx-private-subnet-az1
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: 'us-west-2b'
+      CidrBlock: '10.0.4.0/24'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: nbx-private-subnet-az2
+
+  EIP1:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  EIP2:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EIP1.AllocationId
+      SubnetId: !Ref PublicSubnet1
+
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EIP2.AllocationId
+      SubnetId: !Ref PublicSubnet2
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+ 
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: nbx-balancer
+      Subnets:
+        - !Ref PublicSubnet1 
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref SecurityGroupLB
+
+  LoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Protocol: HTTP
+      Port: 80
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref DefaultTargetGroup
+  
+  DefaultTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: default
+      VpcId: !Ref VPC
+      Protocol: 'HTTP'
+      Port: '80'
+
+  SecurityGroupLB:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "alb"
+      GroupDescription: Security group for LoadBalancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+
+  SecurityGroupBastion:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Bastion
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security group for web app"
+      VpcId: !Ref 'VPC'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 10.0.0.0/16
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 10.0.0.0/16
+
+  EC2Bastion1:
+      Type: AWS::EC2::Instance
+      Properties:
+        ImageId: ami-0e472933a1395e172
+        AvailabilityZone: us-west-2a 
+        InstanceType: t2.small
+        KeyName: !Ref KeyPairName
+        NetworkInterfaces:
+          - AssociatePublicIpAddress: "true"
+            DeviceIndex: "0"
+            GroupSet: 
+              - !Ref SecurityGroupBastion
+            SubnetId: !Ref PublicSubnet1
+
+    EC2Bastion2:
+      Type: AWS::EC2::Instance
+      Properties:
+        ImageId: ami-0e472933a1395e172
+        AvailabilityZone: us-west-2b 
+        InstanceType: t2.small
+        KeyName: !Ref KeyPairName
+        NetworkInterfaces:
+          - AssociatePublicIpAddress: "true"
+            DeviceIndex: "0"
+            GroupSet: 
+              - !Ref SecurityGroupBastion
+            SubnetId: !Ref PublicSubnet2
+
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      Comment: Install app
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              httpd: []
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content: !Join ['', ['[main]
+
+                    ', stack=, !Ref 'AWS::StackId', '
+
+                    ', region=, !Ref 'AWS::Region', '
+
+                    ']]
+              mode: '000400'
+              owner: root
+              group: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Join ['', ['[cfn-auto-reloader-hook]
+
+                    ', 'triggers=post.update
+
+                    ', 'path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init
+
+                    ', 'action=/opt/aws/bin/cfn-init -v ', '         --stack ', !Ref 'AWS::StackName',
+                  '         --resource LaunchConfig ', '         --region ', !Ref 'AWS::Region',
+                  '
+                    ', 'runas=root
+
+                    ']]
+          services:
+            sysvinit:
+              httpd:
+                enabled: true
+                ensureRunning: true
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files: [/etc/cfn/cfn-hup.conf, /etc/cfn/hooks.d/cfn-auto-reloader.conf]
+          sources: 
+            /var/www/html/: "https://mybucket.s3.amazonaws.com/myapp.zip"
+    Properties:
+      KeyName: !Ref KeyPairName
+      ImageId: ami-0e472933a1395e172
+      SecurityGroups: [!Ref 'WebServerSecurityGroup']
+      InstanceType: t2.small
+      UserData:
+        Fn::Base64: !Sub |
+            #!/bin/bash -xe
+            sudo su
+            yum update -y
+            yum update -y aws-cfn-bootstrap
+            yum install -y httpd.x86_64
+            systemctl start httpd.service
+            systemctl enable httpd.service
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource WebServerGroup --region ${AWS::Region}
+             
+  WebServerGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: 
+        - DefaultPrivateRoute1
+        - DefaultPrivateRoute2
+        - PrivateSubnet1RouteTableAssociation
+        - PrivateSubnet2RouteTableAssociation
+    Properties:
+      AutoScalingGroupName: nbx-asg
+      LaunchConfigurationName: !Ref LaunchConfig
+      MinSize: '1'
+      MaxSize: '2'
+      DesiredCapacity: '2'
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      TargetGroupARNs:
+          - !Ref DefaultTargetGroup
+
+
+Outputs:
+
+  VPC:
+    Description: VPC
+    Value: !Ref VPC
+    Export:
+      Name: 'VPC'
+  LoadBalancer:
+    Description: LoadBalancer
+    Value: !Ref LoadBalancer
+    Export:
+      Name: 'LoadBalancer'
+  PrivateSubnet1:
+    Description: PrivateSubnet1
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: 'PrivateSubnet1'
+  PrivateSubnet2:
+    Description: PrivateSubnet2
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: 'PrivateSubnet2'
+  DefaultTargetGroup:
+    Description: DefaultTargetGroup
+    Value: !Ref DefaultTargetGroup
+    Export:
+      Name: 'DefaultTargetGroup'
+
+
+
