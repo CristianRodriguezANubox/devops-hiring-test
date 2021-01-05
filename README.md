@@ -1,42 +1,41 @@
 # Hiring Test DevOps Nubox
-![Nubox!!!!](https://info.nubox.com/hubfs/nubox-logo.png "nubox")
+![Nubox!!!!](/img_nubox/nubox_img.png?raw=true "nubox")
+
+## [GitHubRepository](https://github.com/CristianRodriguezANubox/devops-hiring-test)
+
+## Introducción
+El objetivo del test es que se use cloudformation para crear la infraestructura y github actions o circleci para la automatización.
+
+## Tecnologías a Usar
+- CloudFormation para crear los recursos de la Infraestructura, diagrama mas abajo.
+- Circleci para automatizar la subida de archivos a un bucket S3
 
 ## El Desafío
+### Crear la siguiente infraestructura
+![Nubox!!!!](/infra_img/infra_test.png?raw=true "nubox")
 
-### Infraestructura de Cloudformation con nested stack
+### Crear un HTML
+- Este HTML debe ser muy basico solo que diga ¡Hola Nubox! con la imagen de Nubox que esta presente en este mismo repositorio
 
-Se generan 3 archivos de CF **vpc, webserver, pipeline** los cuales se ejecutan con cloudformation nested stack.
+### Servidor
+- Esta infraestructura debe crear un servidor apache desde el codigo y el HTML con sus componentes deben estar en formato zip, en el arranque del codigo se debe hacer un unzip y mover el HTML junto a sus componentes a la carpeta necesaria del apache para que se muestre en la web.
 
-#### **CF vpc** 
-Genera la infraestructura de Red necesaria para la conectividad a los ambientes.
-- incluye VPC, 2 public / private subnet, SG, NAT, IGW.
+### CI/CD
+- Usando Github actions o circleci se debe realizar lo siguiente:
+1.- Scanner del codigo
+2.- Hola Nubox
+3.- Subir html en formato zip a un bucket 
 
-#### **CF webserver**
-Es el encargado de crear los recursos de cómputo necesarios.
-- incluye ASG, LaunchConfiguration, SG, ALB, SSM session manager.
+### Entregables
+- Codigo Bash para crear, actualizar y destruir la infraestructura
+- Se debe entregar el desafio creando un branch en el mismo repositorio con su nombre.
+- El repositorio debe venir con un README del paso a paso que se efectuo
+- En el README debe venir el Badge de status que los pasos se efectuaron de manera exitosa
 
-#### **pipeline**
-Realiza la configuración de un pipeline con las herramientas de AWS.
-- incluye S3 para Artifacts, CodeCommit, CodeBuild, CodeDeploy, CodePipeline.
+![Nubox!!!!](/img_extras/badge_passed.png?raw=true "nubox")
 
-### Entorno
 
-El entorno se configuro en una cuenta ***nueva*** dentro de una Organización existente, la cual contiene solamente el entorno que se automatizo para Nubox.  
-En esta cuenta se puede crear el ambiente desde Cloud9, ya que contiene todo lo necesario para generar el ambiente.
+- En el repositorio debe venir un print de pantalla mostrando el webserver con el HTML
 
-> Se utilizo la creación del ambiente con Nested Stack en un cuenta con SSO ya que es la recomendación en general de AWS. El entorno contiene buenas prácticas de Roles y policy aunque existe margen de mejora en seguridad. Se esta utilizando SSM sessión manager en vez de Bastion Hosts.
 
-### Pasos
 
-1. Entrar a [Cloud9](https://us-west-2.console.aws.amazon.com/cloud9/ide/a36598f065cc4910ae562cda2fe23877)
-
-2. Dentro del directorio **Jean-Paul** se encontrará un archivo ***nestedStack.sh*** el cual permite:
-- - Crear el Nested Stack
-- - Actualizar Nested Stack con una nueva PEM (KeyName). *Existen 2 PEM por default, nubox y nubox2*.
-- - Borrar el Nested Stack.
-> la url de la pagina web de ejemplo se puede encontrar dentro del outputs de el cloudformation del *webserver*.
-
-3. **Cloud9** contiene otro directorio el cual se llama *nubox-Repository* y esta "enlazado" con CodeCommit. 
-> Para probar el pipeline, dentro de *nubox-Repository* se debe ejecutar `git push`
-
-> El pipeline descarga el código desde CodeCommit, utiliza CodeBuild para levantar un ambiente, el cual prueba que la pagina contenga la palabra *nubox*, al finalizar la prueba se realiza el Deploy de la nueva web con CodeDeploy.
